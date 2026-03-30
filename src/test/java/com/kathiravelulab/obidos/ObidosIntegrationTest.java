@@ -76,6 +76,7 @@ public class ObidosIntegrationTest {
         Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
         String response = s.hasNext() ? s.next() : "";
         assertTrue(response.contains("rs1"));
+        s.close();
         conn.disconnect();
 
         // 3. List ReplicaSets for tenant
@@ -114,6 +115,7 @@ public class ObidosIntegrationTest {
         Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
         String response = s.hasNext() ? s.next() : "";
         assertTrue(response.contains("Modality: CT"));
+        s.close();
         conn.disconnect();
 
         // 3. Verify S3 Metadata
@@ -124,6 +126,7 @@ public class ObidosIntegrationTest {
         s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
         response = s.hasNext() ? s.next() : "";
         assertTrue(response.contains("ObjectKey: study_001/img_01.dcm"));
+        s.close();
         conn.disconnect();
     }
 
@@ -141,7 +144,10 @@ public class ObidosIntegrationTest {
         
         Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
         String response = s.hasNext() ? s.next() : "";
+        
+        assertTrue(response.contains("status"));
         assertTrue(response.contains("Simulated result for query"));
+        s.close();
         conn.disconnect();
     }
 }

@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+  drill:
+    image: apache/drill:latest
+    container_name: drill
+    ports:
+      - "8047:8047"    # Drill Web UI
+      - "31010:31010"  # JDBC port
+    stdin_open: true   # Keeps the container running
+    tty: true          # Allocates a pseudo-TTY
+    # Optionally map a local directory to Drill if needed for file-based queries
+    # volumes:
+    #   - ./data:/data
