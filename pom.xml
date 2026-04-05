@@ -27,7 +27,7 @@
     <hadoop.version>3.5.0</hadoop.version>
     <hive.version>4.2.0</hive.version>
     <drill.version>1.7.0</drill.version>
-    <infinispan.version>14.0.25.Final</infinispan.version>
+    <infinispan.version>16.1.3</infinispan.version>
   </properties>
 
   <dependencies>
