@@ -75,6 +75,10 @@ public class ReplicaSetHolder {
         return virtualProxyMap.getOrDefault(sourceURI, new ArrayList<>());
     }
 
+    public Map<String, List<String>> getAllVirtualProxies() {
+        return virtualProxyMap;
+    }
+
     public void stop() {
         cacheManager.stop();
     }

@@ -24,7 +24,8 @@ public class ObidosIntegrationTest {
         holder = new ReplicaSetHolder();
         DataDownloader downloader = new DataDownloader(holder);
         com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer();
-        new NorthboundController(holder, downloader, queryLayer);
+        com.kathiravelulab.obidos.services.NearDuplicateDetector duplicateDetector = new com.kathiravelulab.obidos.services.NearDuplicateDetector(holder);
+        new NorthboundController(holder, downloader, queryLayer, duplicateDetector);
         Spark.awaitInitialization();
     }
 
@@ -148,6 +149,30 @@ public class ObidosIntegrationTest {
         
         assertTrue(response.contains("status"));
         assertTrue(response.contains("Simulated result for query"));
+        s.close();
+        conn.disconnect();
+    }
+
+    @Test
+    public void testDuplicateDetection() throws Exception {
+        Thread.sleep(1000);
+        // Force add some duplicate virtual proxies
+        holder.addVirtualProxy("tcia://sim1", java.util.Arrays.asList("A", "B", "C"));
+        holder.addVirtualProxy("tcia://sim2", java.util.Arrays.asList("A", "B", "C"));
+
+        URL url = new URL("http://localhost:8080/duplicates");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+
+        assertEquals(200, conn.getResponseCode());
+
+        Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+        String response = s.hasNext() ? s.next() : "";
+
+        assertTrue(response.contains("tcia://sim1"));
+        assertTrue(response.contains("tcia://sim2"));
+        assertTrue(response.contains("similarityScore"));
+        
         s.close();
         conn.disconnect();
     }
