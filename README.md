@@ -26,7 +26,7 @@ mvn clean install
 ### 2. Run Apache Drill (Optional)
 To use a live Apache Drill instance for query execution:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
 ### 3. Run the Northbound API
@@ -41,7 +41,12 @@ The API will be available at `http://localhost:8080`.
 - **POST /replicasets**: Create a new ReplicaSet.
 - **GET /replicasets/:id**: Retrieve a specific ReplicaSet.
 - **GET /tenants/:userID/replicasets**: List ReplicaSets for a specific user.
-- **POST /query**: Execute a SQL query via the Southbound API (Apache Drill).
+- **POST /query/:rsId**: Execute a SQL query rewritten for unified access across multiple sources.
+- **GET /duplicates**: Detect near-duplicate metadata using Jaccard Similarity.
+- **GET /search?q={query}**: Full-text search across persistent metadata index (Lucene).
+- **POST /sources/load?uri={uri}**: Trigger lazy loading of physical data from a source (Hybrid ETL).
+- **POST /federation/pull/:rsId?peer={url}**: Pull a ReplicaSet from a remote P2P peer.
+- **POST /federation/share/:rsId?peer={url}**: Share a local ReplicaSet with a remote peer.
 
 ## Citing Óbidos
 
