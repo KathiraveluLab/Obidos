@@ -26,14 +26,24 @@ public class ReplicaSetHolder {
 
     public ReplicaSetHolder() {
         this.cacheManager = new DefaultCacheManager();
+        org.infinispan.configuration.cache.Configuration cacheConfig = new org.infinispan.configuration.cache.ConfigurationBuilder().build();
+
+        this.cacheManager.defineConfiguration("userMap", cacheConfig);
         this.userMap = cacheManager.getCache("userMap");
+
+        this.cacheManager.defineConfiguration("replicaSetMap", cacheConfig);
         this.replicaSetMap = cacheManager.getCache("replicaSetMap");
+
+        this.cacheManager.defineConfiguration("virtualProxyMap", cacheConfig);
         this.virtualProxyMap = cacheManager.getCache("virtualProxyMap");
+
         this.granularityMaps = new ConcurrentHashMap<>();
         
         // Initialize 4 granularities for DICOM research parity
         for (int i = 0; i < 4; i++) {
-            granularityMaps.put(i, cacheManager.getCache("granularity_" + i));
+            String cacheName = "granularity_" + i;
+            this.cacheManager.defineConfiguration(cacheName, cacheConfig);
+            granularityMaps.put(i, cacheManager.getCache(cacheName));
         }
     }
 

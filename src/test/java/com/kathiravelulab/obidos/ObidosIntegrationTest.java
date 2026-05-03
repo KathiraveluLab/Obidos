@@ -3,8 +3,8 @@ package com.kathiravelulab.obidos;
 import com.kathiravelulab.obidos.api.NorthboundController;
 import com.kathiravelulab.obidos.core.ReplicaSetHolder;
 import com.kathiravelulab.obidos.services.DataDownloader;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import spark.Spark;
 
@@ -17,18 +17,19 @@ import static org.junit.Assert.assertTrue;
 
 public class ObidosIntegrationTest {
 
-    private ReplicaSetHolder holder;
+    private static ReplicaSetHolder holder;
 
-    @Before
-    public void setUp() {
+    @BeforeClass
+    public static void setUp() {
         holder = new ReplicaSetHolder();
         DataDownloader downloader = new DataDownloader(holder);
         com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer();
         new NorthboundController(holder, downloader, queryLayer);
+        Spark.awaitInitialization();
     }
 
-    @After
-    public void tearDown() {
+    @AfterClass
+    public static void tearDown() {
         if (holder != null) {
             holder.stop();
         }
