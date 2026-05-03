@@ -22,10 +22,11 @@ public class ObidosIntegrationTest {
     @BeforeClass
     public static void setUp() {
         holder = new ReplicaSetHolder();
-        DataDownloader downloader = new DataDownloader(holder);
+        com.kathiravelulab.obidos.storage.MetadataIndexer indexer = new com.kathiravelulab.obidos.storage.MetadataIndexer("./target/obidos-test-index");
+        DataDownloader downloader = new DataDownloader(holder, indexer);
         com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer(holder);
         com.kathiravelulab.obidos.services.NearDuplicateDetector duplicateDetector = new com.kathiravelulab.obidos.services.NearDuplicateDetector(holder);
-        new NorthboundController(holder, downloader, queryLayer, duplicateDetector);
+        new NorthboundController(holder, downloader, queryLayer, duplicateDetector, indexer);
         Spark.awaitInitialization();
     }
 
@@ -187,6 +188,39 @@ public class ObidosIntegrationTest {
         assertTrue(response.contains("tcia://sim1"));
         assertTrue(response.contains("tcia://sim2"));
         assertTrue(response.contains("similarityScore"));
+        
+        s.close();
+        conn.disconnect();
+    }
+
+    @Test
+    public void testMetadataSearch() throws Exception {
+        Thread.sleep(1000);
+        
+        // Ensure some metadata is indexed
+        String payload = "{\"replicaSetID\":\"rs_search\", \"dataSources\":[\"tcia://search_col\"]}";
+        URL rsUrl = new URL("http://localhost:8080/replicasets?userID=user4");
+        HttpURLConnection rsConn = (HttpURLConnection) rsUrl.openConnection();
+        rsConn.setRequestMethod("POST");
+        rsConn.setDoOutput(true);
+        rsConn.setRequestProperty("Content-Type", "application/json");
+        rsConn.getOutputStream().write(payload.getBytes());
+        rsConn.getResponseCode();
+        rsConn.disconnect();
+
+        Thread.sleep(2000); // Allow Lucene to write to disk
+
+        // Search for 'Modality' which is added by TCIAConnector
+        URL url = new URL("http://localhost:8080/search?q=Modality");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+
+        assertEquals(200, conn.getResponseCode());
+
+        Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+        String response = s.hasNext() ? s.next() : "";
+
+        assertTrue(response.contains("tcia://search_col"));
         
         s.close();
         conn.disconnect();

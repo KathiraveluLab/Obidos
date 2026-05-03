@@ -9,9 +9,11 @@ import com.kathiravelulab.obidos.model.ReplicaSet;
  */
 public class DataDownloader {
     private final com.kathiravelulab.obidos.core.ReplicaSetHolder replicaSetHolder;
+    private final com.kathiravelulab.obidos.storage.MetadataIndexer indexer;
 
-    public DataDownloader(com.kathiravelulab.obidos.core.ReplicaSetHolder replicaSetHolder) {
+    public DataDownloader(com.kathiravelulab.obidos.core.ReplicaSetHolder replicaSetHolder, com.kathiravelulab.obidos.storage.MetadataIndexer indexer) {
         this.replicaSetHolder = replicaSetHolder;
+        this.indexer = indexer;
     }
 
     public void loadData(String dataSource, String virtualReplica, String userQuery) {
@@ -21,6 +23,9 @@ public class DataDownloader {
         if (connector != null) {
             java.util.List<String> metadata = connector.extractMetadata(dataSource);
             replicaSetHolder.addVirtualProxy(dataSource, metadata);
+            if (indexer != null) {
+                indexer.indexMetadata(dataSource, metadata);
+            }
             System.out.println("Loaded " + metadata.size() + " virtual proxy attributes into repository.");
         } else {
             System.out.println("Unknown data source protocol: " + dataSource);

@@ -20,15 +20,18 @@ public class NorthboundController {
     private final DataDownloader dataDownloader;
     private final com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer;
     private final NearDuplicateDetector duplicateDetector;
+    private final com.kathiravelulab.obidos.storage.MetadataIndexer indexer;
     private final Gson gson = new Gson();
 
     public NorthboundController(ReplicaSetHolder replicaSetHolder, DataDownloader dataDownloader, 
                                 com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer,
-                                NearDuplicateDetector duplicateDetector) {
+                                NearDuplicateDetector duplicateDetector,
+                                com.kathiravelulab.obidos.storage.MetadataIndexer indexer) {
         this.replicaSetHolder = replicaSetHolder;
         this.dataDownloader = dataDownloader;
         this.queryLayer = queryLayer;
         this.duplicateDetector = duplicateDetector;
+        this.indexer = indexer;
         setupRoutes();
     }
 
@@ -115,16 +118,27 @@ public class NorthboundController {
             return gson.toJson(duplicateDetector.detectDuplicates());
         });
 
+        // SEARCH METADATA: GET /search
+        get("/search", (req, res) -> {
+            String q = req.queryParams("q");
+            if (q == null || q.isEmpty()) {
+                res.status(400);
+                return "Missing query parameter 'q'";
+            }
+            return gson.toJson(indexer.searchMetadata(q));
+        });
+
         // Simple Health Check
         get("/health", (req, res) -> "Óbidos is running");
     }
     
     public static void main(String[] args) {
         ReplicaSetHolder holder = new ReplicaSetHolder();
-        DataDownloader downloader = new DataDownloader(holder);
+        com.kathiravelulab.obidos.storage.MetadataIndexer indexer = new com.kathiravelulab.obidos.storage.MetadataIndexer();
+        DataDownloader downloader = new DataDownloader(holder, indexer);
         com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer(holder);
         NearDuplicateDetector duplicateDetector = new NearDuplicateDetector(holder);
-        new NorthboundController(holder, downloader, queryLayer, duplicateDetector);
+        new NorthboundController(holder, downloader, queryLayer, duplicateDetector, indexer);
         System.out.println("Óbidos Northbound API started on port 8080");
     }
 }
