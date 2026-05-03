@@ -7,6 +7,7 @@ import spark.Spark;
 import static spark.Spark.*;
 
 import com.kathiravelulab.obidos.services.NearDuplicateDetector;
+import com.kathiravelulab.obidos.services.FederationService;
 
 import com.google.gson.Gson;
 
@@ -21,17 +22,20 @@ public class NorthboundController {
     private final com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer;
     private final NearDuplicateDetector duplicateDetector;
     private final com.kathiravelulab.obidos.storage.MetadataIndexer indexer;
+    private final FederationService federationService;
     private final Gson gson = new Gson();
 
     public NorthboundController(ReplicaSetHolder replicaSetHolder, DataDownloader dataDownloader, 
                                 com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer,
                                 NearDuplicateDetector duplicateDetector,
-                                com.kathiravelulab.obidos.storage.MetadataIndexer indexer) {
+                                com.kathiravelulab.obidos.storage.MetadataIndexer indexer,
+                                FederationService federationService) {
         this.replicaSetHolder = replicaSetHolder;
         this.dataDownloader = dataDownloader;
         this.queryLayer = queryLayer;
         this.duplicateDetector = duplicateDetector;
         this.indexer = indexer;
+        this.federationService = federationService;
         setupRoutes();
     }
 
@@ -143,6 +147,20 @@ public class NorthboundController {
             return gson.toJson(indexer.searchMetadata(q));
         });
 
+        // FEDERATION: POST /federation/share/:id?peer=...
+        post("/federation/share/:id", (req, res) -> {
+            String id = req.params(":id");
+            String peer = req.queryParams("peer");
+            return federationService.shareReplicaSet(id, peer);
+        });
+
+        // FEDERATION: POST /federation/pull/:id?peer=...
+        post("/federation/pull/:id", (req, res) -> {
+            String id = req.params(":id");
+            String peer = req.queryParams("peer");
+            return gson.toJson(federationService.pullReplicaSet(id, peer));
+        });
+
         // Simple Health Check
         get("/health", (req, res) -> "Óbidos is running");
     }
@@ -153,7 +171,8 @@ public class NorthboundController {
         DataDownloader downloader = new DataDownloader(holder, indexer);
         com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer(holder);
         NearDuplicateDetector duplicateDetector = new NearDuplicateDetector(holder);
-        new NorthboundController(holder, downloader, queryLayer, duplicateDetector, indexer);
+        FederationService federationService = new FederationService(holder);
+        new NorthboundController(holder, downloader, queryLayer, duplicateDetector, indexer, federationService);
         System.out.println("Óbidos Northbound API started on port 8080");
     }
 }

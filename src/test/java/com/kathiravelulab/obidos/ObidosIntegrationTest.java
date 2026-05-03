@@ -26,7 +26,8 @@ public class ObidosIntegrationTest {
         DataDownloader downloader = new DataDownloader(holder, indexer);
         com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer(holder);
         com.kathiravelulab.obidos.services.NearDuplicateDetector duplicateDetector = new com.kathiravelulab.obidos.services.NearDuplicateDetector(holder);
-        new NorthboundController(holder, downloader, queryLayer, duplicateDetector, indexer);
+        com.kathiravelulab.obidos.services.FederationService federationService = new com.kathiravelulab.obidos.services.FederationService(holder);
+        new NorthboundController(holder, downloader, queryLayer, duplicateDetector, indexer, federationService);
         Spark.awaitInitialization();
     }
 
@@ -253,5 +254,36 @@ public class ObidosIntegrationTest {
         assertTrue(updatedMeta.contains("Status: LOADED"));
         boolean hasPhysical = updatedMeta.stream().anyMatch(m -> m.startsWith("PhysicalLocation: /tmp/obidos/s3_download_"));
         assertTrue(hasPhysical);
+    }
+
+    @Test
+    public void testFederatedSharing() throws Exception {
+        Thread.sleep(1000);
+        
+        // 1. Create a ReplicaSet to be shared
+        String payload = "{\"replicaSetID\":\"rs_p2p\", \"dataSources\":[\"tcia://p2p_source\"]}";
+        URL url = new URL("http://localhost:8080/replicasets?userID=userP2P");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.getOutputStream().write(payload.getBytes());
+        assertEquals(201, conn.getResponseCode());
+        conn.disconnect();
+
+        // 2. Simulate pulling it back as a different instance (using self as peer)
+        URL pullUrl = new URL("http://localhost:8080/federation/pull/rs_p2p?peer=http://localhost:8080");
+        HttpURLConnection pullConn = (HttpURLConnection) pullUrl.openConnection();
+        pullConn.setRequestMethod("POST");
+
+        assertEquals(200, pullConn.getResponseCode());
+
+        Scanner s = new Scanner(pullConn.getInputStream()).useDelimiter("\\A");
+        String response = s.hasNext() ? s.next() : "";
+        
+        assertTrue(response.contains("rs_p2p"));
+        assertTrue(response.contains("tcia://p2p_source"));
+        s.close();
+        pullConn.disconnect();
     }
 }

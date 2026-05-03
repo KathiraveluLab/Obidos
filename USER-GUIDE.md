@@ -54,10 +54,50 @@ This rewritten query is then executed natively on Apache Drill, allowing for fed
 
 ---
 
-## Near Duplicate Detection
+## Metadata Search
 
-You can scan your integrated metadata proxies for similarities to prevent redundant ETL workflows.
+Óbidos features a disk-backed persistent repository and a sophisticated indexing engine powered by **Apache Lucene**. Metadata extracted from virtual proxies is automatically indexed for high-performance full-text search.
 
-**Endpoint:** `GET /duplicates`
+**Endpoint:** `GET /search?q={query}`
 
-This endpoint returns pairs of data sources whose metadata items exceed the default 80% Jaccard Similarity threshold.
+**Example:**
+```bash
+curl "http://localhost:8080/search?q=Modality:CT"
+```
+*Returns a list of source URIs matching the criteria.*
+
+---
+
+## Hybrid ETL & Lazy Loading
+
+To optimize storage and network usage, Óbidos utilizes a **Lazy ETL** approach. Data sources are initially registered as lightweight virtual proxies (metadata only). The heavy binary data (e.g., DICOM files) is only pulled into the local repository on-demand.
+
+**Endpoint:** `POST /sources/load?uri={sourceURI}`
+
+**Example:**
+```bash
+curl -X POST "http://localhost:8080/sources/load?uri=s3://bucket1"
+```
+*Triggers the physical download and updates the proxy status to `LOADED`.*
+
+---
+
+## Cross-Organization P2P Sharing
+
+Óbidos supports federated data sharing between different deployments. Researchers can "pull" abstract ReplicaSets from other organizations to reuse their curated dataset pointers without needing to repeat the ETL process.
+
+### Pulling from a Peer
+**Endpoint:** `POST /federation/pull/:rsId?peer={peerURL}`
+
+**Example:**
+```bash
+curl -X POST "http://localhost:8080/federation/pull/rs_cancer_study?peer=http://peer-obidos:8080"
+```
+
+### Sharing with a Peer
+**Endpoint:** `POST /federation/share/:rsId?peer={peerURL}`
+
+**Example:**
+```bash
+curl -X POST "http://localhost:8080/federation/share/rs_local_01?peer=http://remote-obidos:8080"
+```
