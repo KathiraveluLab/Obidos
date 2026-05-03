@@ -44,6 +44,8 @@ public class DataDownloader {
             return new TCIAConnector();
         } else if (sourceURI.startsWith("s3://")) {
             return new S3Connector();
+        } else if (sourceURI.startsWith("hdfs://")) {
+            return new HDFSConnector();
         }
         return null;
     }
