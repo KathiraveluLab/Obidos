@@ -163,6 +163,9 @@ public class NorthboundController {
 
         // Simple Health Check
         get("/health", (req, res) -> "Óbidos is running");
+
+        // Welcome page
+        get("/", (req, res) -> "Welcome to Óbidos Northbound API. Use /health to check status or refer to USER-GUIDE.md for API details.");
     }
     
     public static void main(String[] args) {

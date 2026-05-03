@@ -8,7 +8,7 @@ On-Demand Big Data Integration: A Hybrid ETL Approach for Reproducible Scientifi
 1. **Northbound API**: RESTful interface (SparkJava) for managing ReplicaSets and executing queries.
 2. **Proxy Layer**: In-memory data repository (Infinispan) that stores virtual proxies of datasets.
 3. **Southbound API**: Query transformation and data retrieval layer using Apache Drill JDBC.
-4. **Westbound API**: Pluggable source connectors (e.g., TCIA, S3) for selective metadata and data loading.
+4. **Westbound API**: Pluggable source connectors (e.g., TCIA, S3, HDFS) for selective metadata and data loading.
 
 ## Prerequisites
 
@@ -37,6 +37,7 @@ The API will be available at `http://localhost:8080`.
 
 ## API Endpoints
 
+- **GET /**: Welcome message and landing page.
 - **GET /health**: System health check.
 - **POST /replicasets**: Create a new ReplicaSet.
 - **GET /replicasets/:id**: Retrieve a specific ReplicaSet.
