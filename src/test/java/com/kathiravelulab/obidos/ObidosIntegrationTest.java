@@ -225,4 +225,33 @@ public class ObidosIntegrationTest {
         s.close();
         conn.disconnect();
     }
+
+    @Test
+    public void testLazyLoading() throws Exception {
+        Thread.sleep(1000);
+        
+        // 1. Create proxy
+        holder.addVirtualProxy("s3://lazybucket", java.util.Arrays.asList("SomeMeta"));
+        
+        // 2. Trigger lazy load
+        URL url = new URL("http://localhost:8080/sources/load?uri=s3://lazybucket");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+
+        assertEquals(200, conn.getResponseCode());
+
+        Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+        String response = s.hasNext() ? s.next() : "";
+        
+        assertTrue(response.contains("LOADED"));
+        assertTrue(response.contains("location"));
+        s.close();
+        conn.disconnect();
+
+        // 3. Verify metadata updated in holder
+        java.util.List<String> updatedMeta = holder.getVirtualProxy("s3://lazybucket");
+        assertTrue(updatedMeta.contains("Status: LOADED"));
+        boolean hasPhysical = updatedMeta.stream().anyMatch(m -> m.startsWith("PhysicalLocation: /tmp/obidos/s3_download_"));
+        assertTrue(hasPhysical);
+    }
 }

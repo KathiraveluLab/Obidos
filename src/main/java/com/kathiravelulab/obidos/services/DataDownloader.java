@@ -31,6 +31,36 @@ public class DataDownloader {
             System.out.println("Unknown data source protocol: " + dataSource);
         }
     }
+
+    public String fetchPhysicalData(String sourceURI) {
+        System.out.println("Westbound API: Fetching physical data for " + sourceURI);
+        SourceConnector connector = getConnector(sourceURI);
+        if (connector != null) {
+            String physicalLocation = connector.downloadData(sourceURI);
+            
+            // Replace virtual proxy with loaded object reference
+            java.util.List<String> metadata = new java.util.ArrayList<>(replicaSetHolder.getVirtualProxy(sourceURI));
+            boolean updated = false;
+            if (!metadata.contains("Status: LOADED")) {
+                metadata.add("Status: LOADED");
+                updated = true;
+            }
+            if (!metadata.contains("PhysicalLocation: " + physicalLocation)) {
+                metadata.add("PhysicalLocation: " + physicalLocation);
+                updated = true;
+            }
+            
+            if (updated) {
+                replicaSetHolder.addVirtualProxy(sourceURI, metadata);
+                if (indexer != null) {
+                    indexer.indexMetadata(sourceURI, metadata);
+                }
+                System.out.println("Virtual proxy replaced with physical data at " + physicalLocation);
+            }
+            return physicalLocation;
+        }
+        return null;
+    }
     
     public void createReplicaSet(ReplicaSet rs) {
         System.out.println("Processing new ReplicaSet pointers: " + rs.getReplicaSetID());

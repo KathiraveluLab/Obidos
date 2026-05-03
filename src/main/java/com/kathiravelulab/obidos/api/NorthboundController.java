@@ -113,6 +113,21 @@ public class NorthboundController {
             return gson.toJson(queryLayer.rewriteAndExecuteQuery(rsId, sql));
         });
 
+        // LAZY LOAD: POST /sources/load
+        post("/sources/load", (req, res) -> {
+            String uri = req.queryParams("uri");
+            if (uri == null || uri.isEmpty()) {
+                res.status(400);
+                return "Missing uri parameter";
+            }
+            String location = dataDownloader.fetchPhysicalData(uri);
+            if (location == null) {
+                res.status(404);
+                return "Source connector not found or failed";
+            }
+            return "{\"status\":\"LOADED\", \"location\":\"" + location + "\"}";
+        });
+
         // DUPLICATES: GET /duplicates
         get("/duplicates", (req, res) -> {
             return gson.toJson(duplicateDetector.detectDuplicates());
