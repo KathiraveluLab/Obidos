@@ -99,14 +99,15 @@ public class NorthboundController {
             return gson.toJson(replicaSetHolder.getVirtualProxy(uri));
         });
 
-        // QUERY: POST /query
-        post("/query", (req, res) -> {
+        // QUERY: POST /query/:rsId
+        post("/query/:rsId", (req, res) -> {
+            String rsId = req.params(":rsId");
             String sql = req.body();
             if (sql == null || sql.isEmpty()) {
                 res.status(400);
                 return "Missing SQL query in body";
             }
-            return gson.toJson(queryLayer.executeQuery(sql));
+            return gson.toJson(queryLayer.rewriteAndExecuteQuery(rsId, sql));
         });
 
         // DUPLICATES: GET /duplicates
@@ -121,7 +122,7 @@ public class NorthboundController {
     public static void main(String[] args) {
         ReplicaSetHolder holder = new ReplicaSetHolder();
         DataDownloader downloader = new DataDownloader(holder);
-        com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer();
+        com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer(holder);
         NearDuplicateDetector duplicateDetector = new NearDuplicateDetector(holder);
         new NorthboundController(holder, downloader, queryLayer, duplicateDetector);
         System.out.println("Óbidos Northbound API started on port 8080");

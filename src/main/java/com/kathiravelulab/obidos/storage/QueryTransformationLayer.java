@@ -10,6 +10,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.kathiravelulab.obidos.core.ReplicaSetHolder;
+import com.kathiravelulab.obidos.model.ReplicaSet;
+
 /**
  * Southbound API: Query Transformation and Data Retrieval Layer.
  * As described in the Óbidos architecture (DMAH 17).
@@ -18,6 +21,59 @@ import java.util.Map;
 public class QueryTransformationLayer {
 
     private static final String DRILL_JDBC_URL = "jdbc:drill:drillbit=localhost";
+    private final ReplicaSetHolder replicaSetHolder;
+
+    public QueryTransformationLayer(ReplicaSetHolder replicaSetHolder) {
+        this.replicaSetHolder = replicaSetHolder;
+    }
+
+    public List<Map<String, Object>> rewriteAndExecuteQuery(String replicaSetID, String userQuery) {
+        String rewrittenSql = rewriteQuery(replicaSetID, userQuery);
+        return executeQuery(rewrittenSql);
+    }
+
+    public String rewriteQuery(String replicaSetID, String userQuery) {
+        if (replicaSetID == null || replicaSetID.isEmpty()) {
+            return userQuery;
+        }
+
+        ReplicaSet rs = replicaSetHolder.getReplicaSet(replicaSetID);
+        if (rs == null || rs.getDataSources().isEmpty()) {
+            return userQuery;
+        }
+
+        StringBuilder unionQuery = new StringBuilder();
+        unionQuery.append("(");
+        
+        List<String> sources = rs.getDataSources();
+        for (int i = 0; i < sources.size(); i++) {
+            String source = sources.get(i);
+            String drillTable = transformURIToDrillTable(source);
+            unionQuery.append("SELECT * FROM ").append(drillTable);
+            if (i < sources.size() - 1) {
+                unionQuery.append(" UNION ALL ");
+            }
+        }
+        unionQuery.append(") AS ").append(replicaSetID);
+
+        String targetStr = "FROM " + replicaSetID;
+        if (userQuery.contains(targetStr)) {
+            return userQuery.replace(targetStr, "FROM " + unionQuery.toString());
+        }
+
+        return userQuery;
+    }
+
+    private String transformURIToDrillTable(String uri) {
+        if (uri.startsWith("tcia://")) {
+            return "dfs.tcia.`" + uri.substring(7) + "`";
+        } else if (uri.startsWith("s3://")) {
+            return "dfs.s3.`" + uri.substring(5) + "`";
+        } else if (uri.startsWith("hdfs://")) {
+            return "dfs.hdfs.`" + uri.substring(7) + "`";
+        }
+        return uri;
+    }
 
     public List<Map<String, Object>> executeQuery(String sql) {
         System.out.println("Southbound API: Transforming and executing SQL: " + sql);

@@ -23,7 +23,7 @@ public class ObidosIntegrationTest {
     public static void setUp() {
         holder = new ReplicaSetHolder();
         DataDownloader downloader = new DataDownloader(holder);
-        com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer();
+        com.kathiravelulab.obidos.storage.QueryTransformationLayer queryLayer = new com.kathiravelulab.obidos.storage.QueryTransformationLayer(holder);
         com.kathiravelulab.obidos.services.NearDuplicateDetector duplicateDetector = new com.kathiravelulab.obidos.services.NearDuplicateDetector(holder);
         new NorthboundController(holder, downloader, queryLayer, duplicateDetector);
         Spark.awaitInitialization();
@@ -135,8 +135,21 @@ public class ObidosIntegrationTest {
     @Test
     public void testQueryEndpoint() throws Exception {
         Thread.sleep(1000);
-        String sql = "SELECT * FROM tcia.collection1 WHERE Modality='CT'";
-        URL url = new URL("http://localhost:8080/query");
+
+        // 1. Ensure replicaSet rs_query exists
+        String payload = "{\"replicaSetID\":\"rs_query\", \"dataSources\":[\"tcia://collection1\", \"s3://bucket1\"]}";
+        URL rsUrl = new URL("http://localhost:8080/replicasets?userID=user3");
+        HttpURLConnection rsConn = (HttpURLConnection) rsUrl.openConnection();
+        rsConn.setRequestMethod("POST");
+        rsConn.setDoOutput(true);
+        rsConn.setRequestProperty("Content-Type", "application/json");
+        rsConn.getOutputStream().write(payload.getBytes());
+        assertEquals(201, rsConn.getResponseCode());
+        rsConn.disconnect();
+
+        // 2. Query the replica set
+        String sql = "SELECT * FROM rs_query WHERE Modality='CT'";
+        URL url = new URL("http://localhost:8080/query/rs_query");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
@@ -149,6 +162,8 @@ public class ObidosIntegrationTest {
         
         assertTrue(response.contains("status"));
         assertTrue(response.contains("Simulated result for query"));
+        assertTrue(response.contains("dfs.tcia.`collection1`"));
+        assertTrue(response.contains("dfs.s3.`bucket1`"));
         s.close();
         conn.disconnect();
     }
